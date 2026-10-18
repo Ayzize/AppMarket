@@ -30,8 +30,19 @@ jobs:
           distribution: "zulu"
           java-version: "21"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        continue-on-error: true
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "SDK_ROOT=$SDK_ROOT"
+          ls "$SDK_ROOT/platforms" || true
+          SDKM=$(ls -d "$SDK_ROOT"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)
+          echo "SDKM=$SDKM"
+          yes | "$SDKM" --licenses > /dev/null 2>&1 || true
+          for pkg in "platform-tools" "platforms;android-37" "platforms;android-37.2" "build-tools;37.0.0"; do
+            "$SDKM" "$pkg" > /dev/null 2>&1 && echo "installed $pkg" || echo "skip $pkg"
+          done
+          ls "$SDK_ROOT/platforms" || true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -45,7 +56,6 @@ jobs:
           name: AppMarket-${{ matrix.abi }}
           path: app/android/build/outputs/apk/release/*.apk
           if-no-files-found: error
-          archive: false
 
       - name: Display APK Hashes
         run: |
