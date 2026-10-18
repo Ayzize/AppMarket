@@ -8,6 +8,18 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+val targetAbi = providers.gradleProperty("targetAbi").getOrElse("universal")
+val abiFiltersForTarget = when (targetAbi) {
+    "arm64" -> listOf("arm64-v8a")
+    "armv7" -> listOf("armeabi-v7a")
+    else -> listOf("arm64-v8a", "armeabi-v7a")
+}
+val abiFileNameSuffix = when (targetAbi) {
+    "arm64" -> "_arm64-v8a"
+    "armv7" -> "_armeabi-v7a"
+    else -> "_universal"
+}
+
 dependencies {
     implementation(projects.app.shared)
     implementation(projects.domain)
@@ -41,8 +53,7 @@ android {
         versionName = ProjectConfig.VERSION_NAME
 
         ndk {
-            //noinspection ChromeOsAbiSupport
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += abiFiltersForTarget
         }
     }
 
@@ -121,7 +132,7 @@ androidComponents {
         variant.outputs.forEach { output ->
             (output as? VariantOutputImpl)?.outputFileName?.set(
                 output.versionName.zip(output.versionCode) { versionName, versionCode ->
-                    "${ProjectConfig.APP_NAME}-v${versionName}(${versionCode})${if (variant.buildType == "debug") "_debug" else ""}.apk"
+                    "${ProjectConfig.APP_NAME}-v${versionName}(${versionCode})${if (variant.buildType == "debug") "_debug" else ""}${abiFileNameSuffix}.apk"
                 }
             )
         }
